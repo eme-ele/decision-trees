@@ -2,7 +2,6 @@ from collections import Counter
 import numpy as np
 import math
 
-cuenta = 0
 
 class Node:
 
@@ -34,8 +33,6 @@ class Node:
 
     def get_child(self, attribute_value):
         return self.children[attribute_value]
-
-
 
 
 class DecisionTree:
