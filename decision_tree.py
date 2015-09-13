@@ -1,5 +1,8 @@
 from collections import Counter
 import numpy as np
+import math
+
+cuenta = 0
 
 class Node:
 
@@ -8,28 +11,28 @@ class Node:
         self.children = {}
         self.label = None
 
-    def is_leaf():
+    def is_leaf(self):
         return len(self.children) == 0
 
-    def get_label():
+    def get_label(self):
         return self.label
 
-    def set_label(label):
+    def set_label(self, label):
         self.label = label
 
-    def set_attribute(attribute):
+    def set_attribute(self, attribute):
         self.attribute = attribute
 
-    def get_attribute():
+    def get_attribute(self):
         return self.attribute
 
-    def set_child(attribute_value, child):
+    def set_child(self, attribute_value, child):
         self.children[attribute_value] = child
 
-    def has_child(attribute_value):
+    def has_child(self, attribute_value):
         return attribute_value in self.children
 
-    def get_child(attribute_value):
+    def get_child(self, attribute_value):
         return self.children[attribute_value]
 
 
@@ -63,7 +66,7 @@ class DecisionTree:
         total = len(labels)*1.0
 
         # append labels to the vector for future filtering
-        sub_matrix = np.column_stack(att_vector, labels)
+        sub_matrix = np.column_stack((att_vector, labels))
         for att_value in att_stats:
             # get the labels (second column) corresponding to the submatrix
             # of the att_value occurrence
@@ -81,70 +84,76 @@ class DecisionTree:
                self.attribute_entropy(samples, labels, att_index)
 
 
-    def choose_best(self, samples, labels):
+    def choose_best(self, samples, labels, available_atts):
         num_attributes = samples.shape[1]
-        gains = [self.information_gain(self, samples, labels, i)
-                 for i in range(num_attributes)]
-        return gain.index(max(gains))
+        gains = [self.information_gain(samples, labels, i)
+                 for i in available_atts]
+        best_index = gains.index(max(gains))
+        best_feat = available_atts[best_index]
+        available_atts.pop(best_index)
+        return best_feat
 
 
-    def learn(self, samples, labels):
-        self.root_node = self.build_tree(samples, labels)
+    def fit(self, samples, labels):
+        available_atts = [i for i in xrange(samples.shape[1])]
+        self.root_node = self.build_tree(samples, labels, available_atts)
 
 
-    def build_tree(self, samples, labels):
+    def build_tree(self, samples, labels, available_atts):
+        samples = samples[:]
+        labels = labels[:]
+        available_atts = available_atts[:]
+
+        # ran out of attributes in this branch
+        if len(available_atts) == 0:
+            counts = Counter(labels)
+            node = Node()
+            node.set_label(counts.most_common(1)[0][0])
+
         # if all labels are the same, return a leaf node
-        if all(x == labels[0] for x in labels):
+        elif all(x == labels[0] for x in labels):
             node = Node()
             node.set_label(labels[0])
-            return node
 
-        # if there are no more attributes, return a leaf node
-        num_attributes = samples.shape[1]
-        if num_attributes == 0:
-            stats = Counter(labels)
-            label = stats.most_common(1)[0][0]
+        else:
+            att_index = self.choose_best(samples, labels, available_atts)
             node = Node()
-            node.set_label(label)
-            return node
+            node.set_attribute(att_index)
+            att_values = set(samples[:,att_index])
 
-        attr_index = self.choose_best(samples, labels)
-        node = Node()
-        node.set_attribute(attr_index)
 
-        att_values = set(samples[:,att_index])
+            for value in att_values:
+                matrix = np.column_stack((samples, labels))
+                matrix = matrix[matrix[:,att_index] == value]
 
-        for value in att_values:
-            matrix = np.column_stack(samples, labels)
-            matrix = matrix[matrix[:,attr_index] == value]
-            samples = matrix[:,:-1]
-            labels = matrix[:,-1]
-
-            child = self.build_tree(samples, labels)
-            node.set_child(value, child)
+                child = self.build_tree(matrix[:,:-1], matrix[:,-1], available_atts)
+                node.set_child(value, child)
 
         return node
 
 
-    def classify(self, samples):
-        # a decision tree hasnt been trained
-        if not self.root_node:
-            return -1
-        # output labels
+    def predict(self, samples):
         labels = []
 
-        for s in sample:
+        # a decision tree hasnt been trained
+        if not self.root_node:
+            return labels
+
+        for s in samples:
             current = self.root_node
             label = None
 
-            while not label:
+            while label is None:
                 # reached a leaf, return label
                 if current.is_leaf():
                     label = current.get_label()
-                # go to child
-                sample_attribute = s[current.get_attribute()]
-                if current.has_child(attribute_value):
-                    current = current.get_child(attribute_value)
+                else:
+                    # go to child
+                    sample_attribute = s[current.get_attribute()]
+                    if current.has_child(sample_attribute):
+                        current = current.get_child(sample_attribute)
+                    else:
+                        label = -1
 
             labels.append(label)
         return labels
