@@ -4,6 +4,7 @@ import math
 import copy
 from sklearn.metrics import accuracy_score
 
+count = 0
 
 class Node:
 
@@ -87,6 +88,7 @@ class DecisionTree:
     def __init__(self, root_node=None):
         self.root_node = root_node
         self.leaves = []
+        self.att_thresholds = []
 
     def entropy(self, labels):
         stats = Counter(labels)
@@ -95,28 +97,42 @@ class DecisionTree:
         if total == 0.0:
             return 0.0
 
-        values = map(lambda x: x/total, stats.values())
-        e = -1.0 * reduce(lambda x,y: x + ((y * math.log(y,2)) \
-                                      if y != 0.0 else 0.0),\
-                                      values)
+        values = [x/total for x in stats.values()]
+        values = [x*math.log(x,2) if x!= 0.0 else 0.0 for x in values]
+        e = -1.0 * sum(values)
         return e
 
 
     def attribute_entropy(self, samples, labels, att_index):
         att_vector = samples[:,att_index]
-        att_stats = Counter(att_vector)
+        att_values = set(att_vector)
+
+
+        att_to_consider = sorted(att_values & self.att_thresholds[att_index])
+
+        att_stats = {}
+        greater_than = 0
+        for att_value in att_to_consider:
+            att_stats[att_value] = sum(x > greater_than and x <= att_value for x in att_vector)
+            greater_than = att_value
+
         attribute_entropy = 0.0
         total = len(labels)*1.0
 
         # append labels to the vector for future filtering
         sub_matrix = np.column_stack((att_vector, labels))
-        for att_value in att_stats:
-            # get the labels (second column) corresponding to the submatrix
-            # of the att_value occurrence
-            sub_labels = sub_matrix[sub_matrix[:,0] == att_value][:,1]
+
+        greater_than = 0
+        for att_value in sorted(att_values & self.att_thresholds[att_index]):
+            # obtain the subset for the corresponding threshold
+            sub_labels = sub_matrix[(sub_matrix[:,0] > greater_than) & \
+                                    (sub_matrix[:,0] <= att_value)]
+            # obtain the corresponding labels
+            sub_labels = sub_labels[:,1]
             # prob of occurrence of the value of an attribute * its entropy
             attribute_entropy += \
                      att_stats[att_value]/total * self.entropy(sub_labels)
+            greater_than = att_value
 
         # entropy accumulated over all values for an attribute
         return attribute_entropy
@@ -131,19 +147,21 @@ class DecisionTree:
         num_attributes = samples.shape[1]
         gains = [self.information_gain(samples, labels, i)
                  for i in available_atts]
+
         best_index = gains.index(max(gains))
         best_feat = available_atts[best_index]
         available_atts.pop(best_index)
+
         return best_feat
 
 
-    def threshold_candidates(self, samples, labels):
+    def threshold_candidates(self, samples, labels, k):
         att_thresholds = []
         total = len(labels)*1.0
         for i in xrange(samples.shape[1]):
-            att_vector = samples[:,1]
+            att_vector = samples[:,i]
             att_stats = Counter(att_vector)
-            att_gains = []
+            att_gains = {}
 
             for value in att_stats:
                 sub_matrix = np.column_stack((att_vector, labels))
@@ -151,22 +169,28 @@ class DecisionTree:
                 attribute_entropy = \
                      att_stats[value]/total * self.entropy(sub_labels)
 
-                att_gains.append(self.entropy(labels) - attribute_entropy)
-            print att_gain
-            print np.argsort(att_gains)[::-1][:5]
-            exit(-1)
+                att_gains[value] = self.entropy(labels) - attribute_entropy
+
+            top_attributes = set([a for (a,g) in Counter(att_gains).most_common(k)])
+            top_attributes.add(max(att_vector))
+            att_thresholds.append(top_attributes)
+        self.att_thresholds = att_thresholds
 
     def fit(self, samples, labels):
-        #self.threshold_candidates(samples, labels)
+        self.threshold_candidates(samples, labels, 10)
 
         available_atts = [i for i in xrange(samples.shape[1])]
         self.root_node = self.build_tree(samples, labels, available_atts)
 
 
     def build_tree(self, samples, labels, available_atts):
+
         samples = samples[:]
         labels = labels[:]
         available_atts = available_atts[:]
+
+        global count
+        count += 1
 
         # ran out of attributes in this branch
         if len(available_atts) == 0:
@@ -182,15 +206,21 @@ class DecisionTree:
             self.leaves.append(node)
 
         else:
+
             att_index = self.choose_best(samples, labels, available_atts)
+
             node = Node()
             node.set_attribute(att_index)
             node.set_sample_stats(Counter(labels))
             att_values = set(samples[:,att_index])
 
-            for value in att_values:
+
+            greater_than = 0
+            for value in sorted(att_values & self.att_thresholds[att_index]):
                 matrix = np.column_stack((samples, labels))
-                matrix = matrix[matrix[:,att_index] == value]
+
+                matrix = matrix[(matrix[:,att_index] > greater_than) & \
+                                (matrix[:,att_index] <= value)]
 
                 # recursive call
                 child = self.build_tree(matrix[:,:-1], matrix[:,-1], available_atts)
@@ -203,6 +233,7 @@ class DecisionTree:
                 sample_stats = Counter(matrix[:,-1])
                 child.set_sample_stats(sample_stats)
 
+                greater_than = value
         return node
 
 
@@ -224,8 +255,20 @@ class DecisionTree:
                 else:
                     # go to child
                     sample_attribute = s[current.get_attribute()]
-                    if current.has_child(sample_attribute):
-                        current = current.get_child(sample_attribute)
+                    att_thresholds = sorted(self.att_thresholds[current.get_attribute()])
+
+                    greater_than = 0
+                    chosen_threshold = 0
+                    for t in att_thresholds:
+                        if sample_attribute > greater_than and sample_attribute <= t:
+                            chosen_threshold = t
+                            break
+                        greater_than = t
+
+
+                    # child exists
+                    if current.has_child(chosen_threshold):
+                        current = current.get_child(chosen_threshold)
                     else:
                         # select the majority label for the current node
                         label = current.sample_stats.most_common(1)[0][0]

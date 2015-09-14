@@ -84,13 +84,13 @@ def main():
     print(accuracy_score(test_labels, results))
     print(confusion_matrix(test_labels, results))
 
-    learner.reduced_error_pruning(val_samples, val_labels)
+    '''learner.reduced_error_pruning(val_samples, val_labels)
     results = classify(learner, test_samples)
 
     print "After prunning..."
     print(classification_report(test_labels, results))
     print(accuracy_score(test_labels, results))
-    print(confusion_matrix(test_labels, results))
+    print(confusion_matrix(test_labels, results))'''
 
 
 
