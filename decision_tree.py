@@ -2,7 +2,6 @@ from collections import Counter
 import numpy as np
 import math
 import copy
-from sklearn.metrics import accuracy_score
 
 
 class Node:

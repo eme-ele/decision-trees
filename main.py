@@ -6,7 +6,6 @@ import sys
 import optparse
 import numpy as np
 from decision_tree import DecisionTree
-#from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
 
 # classify
@@ -98,7 +97,7 @@ def tune_depth(train_samples, train_labels, val_samples, val_labels):
 def tune_split(train_samples, train_labels, val_samples, val_labels):
     max_accuracy = 0.0
     best_split = 0
-    for i in range(5,11):
+    for i in range(1,11):
         learner = learn(train_samples, train_labels, max_split=i)
         results = classify(learner, val_samples)
         acc_score = get_accuracy(results, val_labels)
