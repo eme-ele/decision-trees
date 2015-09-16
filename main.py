@@ -98,7 +98,7 @@ def tune_depth(train_samples, train_labels, val_samples, val_labels):
 def tune_split(train_samples, train_labels, val_samples, val_labels):
     max_accuracy = 0.0
     best_split = 0
-    for i in range(9,11):
+    for i in range(5,11):
         learner = learn(train_samples, train_labels, max_split=i)
         results = classify(learner, val_samples)
         acc_score = get_accuracy(results, val_labels)
@@ -151,7 +151,7 @@ def main():
     val_samples, val_labels = parse_file(opts.val_set)
 
     # Training
-    learner = learn(train_samples, train_labels)
+    learner = learn(train_samples, train_labels, opts.max_depth, opts.max_split)
 
     results = classify(learner, test_samples)
     report_results(results, test_labels)
@@ -164,7 +164,9 @@ def main():
     if opts.tune_split:
         opts.max_split = tune_split(train_samples, train_labels, val_samples, val_labels)
 
-    print "\nTesting with adjusted max_depth: ", opts.max_depth, "and adjusted max_split: ", opts.max_split
+    if opts.tune_depth or opts.tune_split:
+
+        print "\nTesting with adjusted max_depth: ", opts.max_depth, "and adjusted max_split: ", opts.max_split
 
     learner = learn(train_samples, train_labels, opts.max_depth, opts.max_split)
     results = classify(learner, test_samples)

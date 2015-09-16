@@ -193,7 +193,7 @@ class DecisionTree:
     def choose_best(self, samples, labels, available_atts):
         num_attributes = samples.shape[1]
         gains = [self.information_gain(samples, labels, i)
-                 for i in available_atts]
+                 for i in available_atts ]
 
         best_index = gains.index(max(gains))
         best_feat = available_atts[best_index]
@@ -239,6 +239,7 @@ class DecisionTree:
 
         node = Node()
         node.set_depth(depth)
+        #print "depth", node.get_depth()
 
         # ran out of attributes in this branch
         # or I have reached my maximum depth limit
@@ -251,8 +252,6 @@ class DecisionTree:
         # if all labels are the same
         # return a leaf node with such class
         elif all(x == labels[0] for x in labels):
-            node = Node()
-            node.set_depth(depth)
             node.set_label(labels[0])
             self.leaves.append(node)
 
@@ -264,13 +263,18 @@ class DecisionTree:
             node.set_sample_stats(Counter(labels))
             att_values = set(samples[:,att_index])
 
-
             greater_than = 0
-            for value in sorted(att_values & self.att_thresholds[att_index]):
+            has_children = False
+
+            for value in sorted(self.att_thresholds[att_index]):
                 matrix = np.column_stack((samples, labels))
 
                 matrix = matrix[(matrix[:,att_index] > greater_than) & \
                                 (matrix[:,att_index] <= value)]
+
+                if len(matrix) == 0:
+                    continue
+                has_children = True
 
                 # recursive call
                 child = self.build_tree(matrix[:,:-1], matrix[:,-1], available_atts, depth+1)
@@ -286,10 +290,16 @@ class DecisionTree:
 
                 greater_than = value
 
+            if not has_children:
+                counts = Counter(labels)
+                node.set_label(counts.most_common(1)[0][0])
+                self.leaves.append(node)
+
         return node
 
 
     def predict(self, samples):
+
         labels = []
 
         # a decision tree hasnt been trained
@@ -300,12 +310,9 @@ class DecisionTree:
             current = self.root_node
             label = None
 
-            print "predicting sample", s
-
             while label is None:
                 # reached a leaf, return label
                 if current.is_leaf():
-                    print "reached a leaf", current.get_label(), current.sample_stats
                     label = current.get_label()
                 else:
                     # go to child
