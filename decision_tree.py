@@ -4,7 +4,6 @@ import math
 import copy
 from sklearn.metrics import accuracy_score
 
-count = 0
 
 class Node:
 
@@ -14,6 +13,7 @@ class Node:
         self.label = None
         self.parent = None
         self.sample_stats = {}
+        self.depth = None
 
     def is_leaf(self):
         return len(self.children) == 0
@@ -42,8 +42,52 @@ class Node:
     def get_children(self):
         return self.children
 
-    def prune_leaf(self, value):
-        self.children.pop(value)
+    def get_depth(self):
+        return self.depth
+
+    def set_depth(self, depth):
+        self.depth = depth
+
+    def prune(self):
+        pruned_leaves = []
+        visited = set([])
+        visited.add(self)
+        queue = []
+        queue.append(self)
+
+        ## BFS to find leaves on pruned node
+        ## subtree
+        while len(queue) > 0:
+            current = queue.pop(0)
+            for child in current.children.values():
+                if child not in visited:
+                    ## add to return
+                    if child.is_leaf():
+                        pruned_leaves.append(child)
+                    visited.add(child)
+                    queue.append(child)
+
+        ## now prune the subtree
+        self.children = {}
+
+        return pruned_leaves, len(visited)-1
+
+    def count_nodes(self):
+        ## bfs to count nodes
+        ## only done for debugging
+        visited = set([])
+        queue = []
+        queue.append(self)
+        visited.add(self)
+
+        while len(queue) > 0:
+            current = queue.pop(0)
+            for child in current.children.values():
+                if child not in visited:
+                    visited.add(child)
+                    queue.append(child)
+
+        return len(visited)
 
     def set_parent(self, node, value):
         self.parent = (node, value)
@@ -66,6 +110,7 @@ class Node:
             node = node.parent[0]
         return node
 
+    ## str representation for debugging
     '''def __str__(self):
         string = "parent:"
         if self.parent is not None:
@@ -85,10 +130,12 @@ class Node:
 class DecisionTree:
 
 
-    def __init__(self, root_node=None):
+    def __init__(self, root_node=None, max_depth=9, max_split=10):
         self.root_node = root_node
         self.leaves = []
         self.att_thresholds = []
+        self.max_depth = max_depth
+        self.max_split = max_split
 
     def entropy(self, labels):
         stats = Counter(labels)
@@ -177,31 +224,35 @@ class DecisionTree:
         self.att_thresholds = att_thresholds
 
     def fit(self, samples, labels):
-        self.threshold_candidates(samples, labels, 10)
+
+        self.threshold_candidates(samples, labels, self.max_split)
 
         available_atts = [i for i in xrange(samples.shape[1])]
-        self.root_node = self.build_tree(samples, labels, available_atts)
+        self.root_node = self.build_tree(samples, labels, available_atts, 0)
 
 
-    def build_tree(self, samples, labels, available_atts):
+    def build_tree(self, samples, labels, available_atts, depth):
 
         samples = samples[:]
         labels = labels[:]
         available_atts = available_atts[:]
 
-        global count
-        count += 1
+        node = Node()
+        node.set_depth(depth)
 
         # ran out of attributes in this branch
-        if len(available_atts) == 0:
+        # or I have reached my maximum depth limit
+        # return majority class
+        if (len(available_atts) == 0) or (node.get_depth() == self.max_depth):
             counts = Counter(labels)
-            node = Node()
             node.set_label(counts.most_common(1)[0][0])
             self.leaves.append(node)
 
-        # if all labels are the same, return a leaf node
+        # if all labels are the same
+        # return a leaf node with such class
         elif all(x == labels[0] for x in labels):
             node = Node()
+            node.set_depth(depth)
             node.set_label(labels[0])
             self.leaves.append(node)
 
@@ -209,7 +260,6 @@ class DecisionTree:
 
             att_index = self.choose_best(samples, labels, available_atts)
 
-            node = Node()
             node.set_attribute(att_index)
             node.set_sample_stats(Counter(labels))
             att_values = set(samples[:,att_index])
@@ -223,7 +273,7 @@ class DecisionTree:
                                 (matrix[:,att_index] <= value)]
 
                 # recursive call
-                child = self.build_tree(matrix[:,:-1], matrix[:,-1], available_atts)
+                child = self.build_tree(matrix[:,:-1], matrix[:,-1], available_atts, depth+1)
 
                 # set the parent child
                 node.set_child(value, child)
@@ -233,7 +283,9 @@ class DecisionTree:
                 sample_stats = Counter(matrix[:,-1])
                 child.set_sample_stats(sample_stats)
 
+
                 greater_than = value
+
         return node
 
 
@@ -248,9 +300,12 @@ class DecisionTree:
             current = self.root_node
             label = None
 
+            print "predicting sample", s
+
             while label is None:
                 # reached a leaf, return label
                 if current.is_leaf():
+                    print "reached a leaf", current.get_label(), current.sample_stats
                     label = current.get_label()
                 else:
                     # go to child
@@ -276,48 +331,75 @@ class DecisionTree:
             labels.append(label)
         return labels
 
+    def metrics(self, results, labels):
+        tp = 0; fp = 0; fn = 0; tn = 0
+        for true_class, pred_class in zip(labels, results):
+            if true_class == 1 and pred_class == 1:
+                tp += 1
+            elif true_class == 1 and pred_class == 0:
+                fn += 1
+            elif true_class == 0 and pred_class == 1:
+                fp += 1
+            elif true_class == 0 and pred_class == 0:
+                tn += 1
+        return tp, fp, fn, tn
+
+
     def get_accuracy(self, samples, labels):
         results = self.predict(samples)
-        return accuracy_score(labels, results)
+        (tp, fp, fn, tn) = self.metrics(results, labels)
+        return float(tp+tn)/(tp+tn+fp+fn)
+
 
     # receives validation data
     def reduced_error_pruning(self, val_samples, val_labels):
-        print "trying reduced error pruning"
+        print "\nTrying reduced error pruning"
         accuracy = self.get_accuracy(val_samples, val_labels)
-        print "initial accuracy on validation set", accuracy
+        print "Initial accuracy on validation set", accuracy
         monitor_leaves = self.leaves[:]
+
+        print "Initial node count", self.root_node.count_nodes()
 
         while len(monitor_leaves) > 0:
 
-            ## leaf and parent to work on
             leaf = monitor_leaves[0]
+
             (node, value) = leaf.get_parent()
 
             temp_node = copy.deepcopy(node)
-            temp_node.prune_leaf(value)
+            temp_node.prune()
 
             if temp_node.is_leaf():
                 temp_node.label = temp_node.sample_stats.most_common(1)[0][0]
 
             temp_root = temp_node.get_root()
             temp_tree = DecisionTree(temp_root)
+            temp_tree.att_thresholds = self.att_thresholds
+
             temp_accuracy = temp_tree.get_accuracy(val_samples, val_labels)
 
             if temp_accuracy >= accuracy:
                 accuracy = temp_accuracy
-                print "\tprunned and increased accuracy to: ", accuracy
                 # includes current leaf and its sibilings
-                self.leaves.remove(leaf)
-                monitor_leaves.remove(leaf)
 
-                node.prune_leaf(value)
+                pruned_leaves, num_pruned = node.prune()
 
-                if node.is_leaf():
-                    node.label = node.sample_stats.most_common(1)[0][0]
-                    self.leaves.append(node)
-                    monitor_leaves.append(node)
+                print "\tprunned {0} nodes and increased accuracy to: {1}".format(num_pruned, accuracy)
+
+                for pl in pruned_leaves:
+                    monitor_leaves.remove(pl)
+                    self.leaves.remove(pl)
+
+                node.label = node.sample_stats.most_common(1)[0][0]
+                self.leaves.append(node)
+                monitor_leaves.append(node)
+
+                root = node.get_root()
+                print "\tactual node count:", root.count_nodes()
 
             else:
                 monitor_leaves.remove(leaf)
 
-            del temp_node
+
+        print "Final node count", self.root_node.count_nodes()
+
