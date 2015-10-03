@@ -83,12 +83,14 @@ def main():
     fe = ngrams_fe(1,2)
 
     print "training..."
-    fe.train(train_samples, train_labels)
+    feats = fe.train(train_samples, train_labels)
 
     print "extracting..."
     ret = fe.extract(train_samples)
 
     print len(ret)
+
+    #print ret
 
 
 if __name__ == '__main__':
