@@ -80,7 +80,7 @@ def main():
     print "preprocessing..."
     train_samples = preprocess(train_samples)
 
-    fe = ngrams_fe(1,2)
+    fe = ngrams_fe(1)
 
     print "training..."
     feats = fe.train(train_samples, train_labels)
@@ -90,7 +90,7 @@ def main():
 
     print len(ret)
 
-    #print ret
+    print ret
 
 
 if __name__ == '__main__':

@@ -5,17 +5,14 @@ class Perceptron(object):
     def __init__(self, max_iter, learn_rate):
         self.max_iter = max_iter
         self.learn_rate = learn_rate
-        self.weights = []
+        self.weights = np.array([])
 
     # weights should be set to random small values
     def init_weights(self, num_feats):
-        # + 1 is added to account for w_0
-        for i in xrange(num_feats + 1):
-            self.weights.append(0.0)
+        self.weights = np.zeros(num_feats)
 
     def sgn(self, sample):
         x = sample[:]
-
         dot_product = np.dot(x, self.weights)
         if dot_product > 0:
             return 1
@@ -23,9 +20,9 @@ class Perceptron(object):
             return -1
 
     def update_weights(x, y):
-        for i in xrange(len(self.weights)):
-            self.weights[i] = self.weights[i] + \
-                              self.learn_rate * y * x[i]
+        self.weights = self.weights + self.learn_rate * y * x
+        #   self.weights[i] = self.weights[i] + \
+        #                      self.learn_rate * y * x[i]
 
     def fit(self, samples, labels):
         # init weights for all features
