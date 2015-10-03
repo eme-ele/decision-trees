@@ -1,4 +1,7 @@
 import sys
+import optparse
+import csv
+from feature_extractor import *
 
 # template.py
 # -------
@@ -6,71 +9,87 @@ import sys
 
 ##predict a single example
 def predict_one(weights, input_snippet):
-	pass
-	return sign
+    pass
+    return sign
 
 ##Perceptron
 #-----------
 def perceptron(maxIterations, featureSet):
     pass
-    return weights 
+    return weights
 
 
 ##Winnow
 #-------
 def winnow(maxIterations, featureSet):
     pass
-    return weights 
+    return weights
+
+
+## preprocessing
+def preprocess(samples):
+    samples = [s.lower() for s in samples]
+    #samples = [s.split() for s in samples]
+    return samples
+
+## parse files
+def parse_file(filename):
+    samples = []
+    labels = []
+    with open(filename, 'rb') as f:
+        reader = csv.reader(f, delimiter=',')
+        for row in reader:
+            samples.append(row[0])
+            labels.append(1 if row[1] == '+' else -1)
+    return samples, labels
 
 # main
 # ----
 # The main program loop
 # You should modify this function to run your experiments
 
-def parseArgs(args):
-  """Parses arguments vector, looking for switches of the form -key {optional value}.
-  For example:
-	parseArgs([ 'template.py', '-a', 1, '-i', 10, '-f', 1 ]) = {'-t':1, '-i':10, '-f':1 }"""
-  args_map = {}
-  curkey = None
-  for i in xrange(1, len(args)):
-    if args[i][0] == '-':
-      args_map[args[i]] = True
-      curkey = args[i]
-    else:
-      assert curkey
-      args_map[curkey] = args[i]
-      curkey = None
-  return args_map
-
-def validateInput(args):
-    args_map = parseArgs(args)
-
-    algorithm = 1 # 1: perceptron, 2: winnow
-    maxIterations = 10 # the maximum number of iterations. should be a positive integer
-	featureSet = 1 # 1: original attribute, 2: pairs of attributes, 3: both
-
-    if '-a' in args_map:
-      algorithm = int(args_map['-a'])
-    if '-i' in args_map:
-      maxIterations = int(args_map['-i'])
-    if '-f' in args_map:
-      featureSet = int(args_map['-f'])
-
-    assert algorithm in [1, 2]
-    assert maxIterations > 0
-    assert featureSet in [1, 2, 3]
-	
-    return [algorithm, maxIterations, featureSet]
-
+# I changed the input method to optparse for convenience
 def main():
-    arguments = validateInput(sys.argv)
-    algorithm, maxIterations, featureSet = arguments
-    print algorithm, maxIterations, featureSet
+
+    parser = optparse.OptionParser()
+    parser.add_option('-a', dest='algorithm', default=1,
+                      help='1: perceptron, 2: winnow', type='int')
+    parser.add_option('-i', dest='max_iterations', default=10,
+                      help='max number of iterations', type='int')
+    parser.add_option('-f', dest='feature_set', default=1,
+                      help='1: unigrams, 2: bigrams, 3: both')
+
+    (opts, args) = parser.parse_args()
+    ## no argument is mandatory, they all have defaults
+    ## validate input
+    if (opts.algorithm not in [1,2]) or \
+       (opts.max_iterations < 0) or \
+       (opts.feature_set not in [1,2,3]):
+        print "invalid argument"
+        parser.print_help()
+        return
 
     # ====================================
     # WRITE CODE FOR YOUR EXPERIMENTS HERE
     # ====================================
+
+    train_samples, train_labels = parse_file("data/hw2/train.csv")
+    print "num_samples", len(train_labels),
+    print "positive:", train_labels.count(1), "negative:", train_labels.count(-1)
+
+    print "preprocessing..."
+    train_samples = preprocess(train_samples)
+
+    fe = ngrams_fe(1,2)
+
+    print "training..."
+    fe.train(train_samples, train_labels)
+
+    print "extracting..."
+    ret = fe.extract(train_samples)
+
+    print len(ret)
+
 
 if __name__ == '__main__':
     main()
