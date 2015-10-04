@@ -95,7 +95,7 @@ def main():
     else:
         classifier = winnow(opts.max_iterations, 2)
 
-    classifier.fit(train_features, train_labels)
+    classifier.fit(train_features, train_labels, fe.n_feats)
     test_features = fe.extract(test_samples)
     results = classifier.predict(test_features)
 

@@ -12,25 +12,25 @@ class winnow(object):
         self.weights = np.ones(num_feats)
 
     def predict_one(self, sample):
-        dot_product = sample.dot(self.weights)
+        dot_product = 0
+        for (j,v) in sample:
+            dot_product += v * self.weights[j]
         if dot_product >= self.tita:
             return 1
         else:
             return -1
 
     def promote(self, sample):
-        row, col = sample.nonzero()
-        for i in xrange(col.shape[0]):
-            self.weights[col[i]] = self.alfa*self.weights[col[i]]
+        for (j,v) in sample:
+            self.weights[j] = self.alfa*self.weights[j]
 
     def demote(self, sample):
-        row, col = sample.nonzero()
-        for i in xrange(col.shape[0]):
-            self.weights[col[i]] = self.weights[col[i]]/self.alfa
+        for (j,v) in sample:
+            self.weights[j] = self.weights[j]/self.alfa
 
-    def fit(self, samples, labels):
-        self.tita = samples.shape[1]
-        self.init_weights(samples.shape[1])
+    def fit(self, samples, labels, n_feats):
+        self.tita = n_feats
+        self.init_weights(n_feats)
 
         for i in xrange(self.max_iter):
             num_mistakes = 0

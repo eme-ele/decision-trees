@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import itertools
 
 class perceptron(object):
 
@@ -17,11 +18,8 @@ class perceptron(object):
     def sgn(self, sample):
         dot_product = 0
         #print sample
-        for elem in sample.iteritems():
-            i,j = elem[0]
-            dot_product += sample[i,j] * self.weights[j]
-        #dot_product = sample.dot(self.weights)
-        ## add bias weight_0 to dot_product
+        for (j,v) in sample:
+            dot_product += v * self.weights[j]
         dot_product += 1*self.weight_0
         if dot_product > 0:
             return 1
@@ -31,19 +29,13 @@ class perceptron(object):
     def update_weights(self, x, y):
         # calculate bias weight_0
         self.weight_0 = self.weight_0 + self.learn_rate * y * 1
-        for elem in x.iteritems():
-            i,j = elem[0]
-            self.weights[j] += self.learn_rate * y * x[i,j]
+        for (j,v) in x:
+            self.weights[j] += self.learn_rate * y * v
 
-        #self.weights = self.weights + self.learn_rate * y * x
-        #self.weights = self.weights.getA1()
-        #print self.weights
-        #   self.weights[i] = self.weights[i] + \
-        #                      self.learn_rate * y * x[i]
 
-    def fit(self, samples, labels):
+    def fit(self, samples, labels, n_feats):
         # init weights for all features
-        self.init_weights(samples.shape[1])
+        self.init_weights(n_feats)
 
         for i in xrange(self.max_iter):
             num_mistakes = 0

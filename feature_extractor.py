@@ -15,6 +15,7 @@ class ngrams_fe(object):
         else:
             self.j = i
         self.n_gram_dict = {}
+        self.n_feats = 0
 
     def sample_ngrams(self, sample, n):
         return zip(*[sample[x:] for x in range(n)])
@@ -36,25 +37,27 @@ class ngrams_fe(object):
 
         self.n_grams_dict = dict(itertools.izip(n_grams, positions))
 
-        print "number of n_grams", len(n_grams)
+        self.n_feats = len(n_grams)
+
+        print "number of features extracted:", self.n_feats
 
     def extract(self, samples):
         feat_set = set(self.n_grams_dict.keys())
-        #ret = np.zeros(shape=(len(samples), len(feat_set)))
-        ret = sparse.dok_matrix((len(samples), len(feat_set)), dtype=np.float32)
+        ret = []
 
         for i, sample in enumerate(samples):
             sample = sample.split()
             obs_n_grams = set([])
+
+            ret_i = []
 
             for x in xrange(self.i, self.j + 1):
                 obs_n_grams = obs_n_grams.union(set(self.sample_ngrams(sample, x)))
 
             out = obs_n_grams.intersection(feat_set)
             for e in out:
-                #print len(samples), len(feat_set)
-                #print i, self.n_grams_dict[e]
-                ret[i,self.n_grams_dict[e]] = 1.0
+                ret_i.append((self.n_grams_dict[e], 1.0))
+            ret.append(ret_i)
 
             sys.stdout.write("\r\textracted {0}% of users".\
                     format((i * 100) / len(samples)))
