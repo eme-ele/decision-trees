@@ -36,15 +36,14 @@ class winnow(object):
             num_mistakes = 0
 
             for j in xrange(len(labels)):
-                x = samples.getrow(j)
-                y_pred = self.predict_one(x)
+                y_pred = self.predict_one(samples[j])
 
                 if labels[j] == 1 and y_pred == -1:
                     num_mistakes += 1
-                    self.promote(x)
+                    self.promote(samples[j])
                 elif labels[j] == -1 and y_pred == 1:
                     num_mistakes += 1
-                    self.demote(x)
+                    self.demote(samples[j])
 
             print i, " - # mistakes", num_mistakes
             if num_mistakes == 0:

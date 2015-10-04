@@ -60,4 +60,4 @@ class ngrams_fe(object):
                     format((i * 100) / len(samples)))
         sys.stdout.write('\n')
 
-        return ret.tocoo().tocsr()
+        return ret
