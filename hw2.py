@@ -1,8 +1,6 @@
-import sys
 import optparse
 import csv
-from feature_extractor import *
-import numpy as np
+from feature_extractor import ngrams_fe
 from perceptron import perceptron
 from winnow import winnow
 
