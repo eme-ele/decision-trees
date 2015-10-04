@@ -2,6 +2,11 @@ import sys
 import optparse
 import csv
 from feature_extractor import *
+import numpy as np
+from perceptron import perceptron
+from winnow import winnow
+
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
 # template.py
 # -------
@@ -11,20 +16,6 @@ from feature_extractor import *
 def predict_one(weights, input_snippet):
     pass
     return sign
-
-##Perceptron
-#-----------
-def perceptron(maxIterations, featureSet):
-    pass
-    return weights
-
-
-##Winnow
-#-------
-def winnow(maxIterations, featureSet):
-    pass
-    return weights
-
 
 ## preprocessing
 def preprocess(samples):
@@ -57,9 +48,11 @@ def main():
     parser.add_option('-i', dest='max_iterations', default=10,
                       help='max number of iterations', type='int')
     parser.add_option('-f', dest='feature_set', default=1,
-                      help='1: unigrams, 2: bigrams, 3: both')
+                      help='1: unigrams, 2: bigrams, 3: both', type='int')
 
     (opts, args) = parser.parse_args()
+    print opts.feature_set
+
     ## no argument is mandatory, they all have defaults
     ## validate input
     if (opts.algorithm not in [1,2]) or \
@@ -74,24 +67,41 @@ def main():
     # ====================================
 
     train_samples, train_labels = parse_file("data/hw2/train.csv")
-    print "num_samples", len(train_labels),
-    print "positive:", train_labels.count(1), "negative:", train_labels.count(-1)
+    test_samples, test_labels = parse_file("data/hw2/test.csv")
+    print "num train_samples", len(train_labels),
+    print "\tpos:", train_labels.count(1), "neg:", train_labels.count(-1)
+    print "num test samples", len(test_labels)
+    print "\tpos:", test_labels.count(1), "neg:", test_labels.count(-1)
 
     print "preprocessing..."
     train_samples = preprocess(train_samples)
+    test_samples = preprocess(test_samples)
 
-    fe = ngrams_fe(1)
+    if opts.feature_set == 1:
+        fe = ngrams_fe(1)
+    elif opts.feature_set == 2:
+        fe = ngrams_fe(2)
+    elif opts.feature_set == 3:
+        fe = ngrams_fe(1,2)
 
-    print "training..."
-    feats = fe.train(train_samples, train_labels)
+    print "training feature extractor..."
+    fe.train(train_samples, train_labels)
+    print "extracting features..."
+    train_features = fe.extract(train_samples)
 
-    print "extracting..."
-    ret = fe.extract(train_samples)
+    print "training classifier..."
+    if opts.algorithm == 1:
+        classifier = perceptron(opts.max_iterations, 0.1)
+    else:
+        classifier = winnow(opts.max_iterations, 2)
 
-    print len(ret)
+    classifier.fit(train_features, train_labels)
+    test_features = fe.extract(test_samples)
+    results = classifier.predict(test_features)
 
-    print ret
-
+    print classification_report(test_labels, results)
+    print accuracy_score(test_labels, results)
+    print confusion_matrix(test_labels, results)
 
 if __name__ == '__main__':
     main()

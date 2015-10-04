@@ -3,6 +3,7 @@ import re
 from collections import Counter
 import sys
 import itertools
+from scipy import sparse
 
 
 class ngrams_fe(object):
@@ -39,7 +40,8 @@ class ngrams_fe(object):
 
     def extract(self, samples):
         feat_set = set(self.n_grams_dict.keys())
-        ret = np.zeros(shape=(len(samples), len(feat_set)))
+        #ret = np.zeros(shape=(len(samples), len(feat_set)))
+        ret = sparse.dok_matrix((len(samples), len(feat_set)), dtype=np.float32)
 
         for i, sample in enumerate(samples):
             sample = sample.split()
@@ -50,11 +52,12 @@ class ngrams_fe(object):
 
             out = obs_n_grams.intersection(feat_set)
             for e in out:
-                ret[i][self.n_grams_dict[e]] = 1.0
+                #print len(samples), len(feat_set)
+                #print i, self.n_grams_dict[e]
+                ret[i,self.n_grams_dict[e]] = 1.0
 
             sys.stdout.write("\r\textracted {0}% of users".\
                     format((i * 100) / len(samples)))
-
         sys.stdout.write('\n')
 
-        return ret
+        return ret.tocoo().tocsr()
