@@ -1,8 +1,8 @@
 import optparse
 import csv
 from feature_extractor import ngrams_fe
-from perceptron import perceptron
-from winnow import winnow
+from perceptron import perceptron as pcp
+from winnow import winnow as wnn
 
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
@@ -10,10 +10,20 @@ from sklearn.metrics import classification_report, accuracy_score, confusion_mat
 # -------
 # YOUR NAME HERE
 
+def perceptron(max_iterations, learning_rate, num_feats, samples, labels):
+    classifier = pcp(max_iterations, learning_rate)
+    classifier.fit(samples, labels, num_feats)
+    return classifier
+
+def winnow(max_iterations, alpha, num_feats, samples, labels):
+    classifier = wnn(max_iterations, alpha)
+    classifier.fit(samples, labels, num_feats)
+    return classifier
+
 ##predict a single example
-def predict_one(weights, input_snippet):
-    pass
-    return sign
+def predict_one(classifier, sample):
+    result = classifier.predict_one(sample)
+    return result
 
 ## preprocessing
 def preprocess(samples):
@@ -47,7 +57,6 @@ def main():
                       help='max number of iterations', type='int')
     parser.add_option('-f', dest='feature_set', default=1,
                       help='1: unigrams, 2: bigrams, 3: both', type='int')
-
     (opts, args) = parser.parse_args()
     print opts.feature_set
 
@@ -84,17 +93,17 @@ def main():
 
     print "training feature extractor..."
     fe.train(train_samples, train_labels)
-    print "extracting features..."
+    print "extracting features for complete data (train/test)..."
     train_features = fe.extract(train_samples)
+    test_features = fe.extract(test_samples)
 
     print "training classifier..."
+    ## if perceptron, test both standard and averaged perceptron
     if opts.algorithm == 1:
-        classifier = perceptron(opts.max_iterations, 0.1)
+        classifier = perceptron(opts.max_iterations, 0.1, fe.n_feats, train_features, train_labels)
     else:
-        classifier = winnow(opts.max_iterations, 2)
+        classifier = winnow(opts.max_iterations, 2, fe.n_feats, train_features, train_labels)
 
-    classifier.fit(train_features, train_labels, fe.n_feats)
-    test_features = fe.extract(test_samples)
     results = classifier.predict(test_features)
 
     print classification_report(test_labels, results)

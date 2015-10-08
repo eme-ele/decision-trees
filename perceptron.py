@@ -20,7 +20,6 @@ class perceptron(object):
 
     def sgn(self, sample):
         dot_product = 0
-        #print sample
         for (j,v) in sample:
             dot_product += v * self.weights[j]
         dot_product += self.bias
@@ -51,8 +50,6 @@ class perceptron(object):
 
     def fit(self, samples, labels, n_feats):
         # init weights for all features
-        print samples
-        exit(-1)
         self.init_weights(n_feats)
         for i in xrange(self.max_iter):
             num_mistakes = 0
@@ -71,12 +68,11 @@ class perceptron(object):
                 return
         return
 
-    def predict(self, samples, avg=1):
-        if avg:
-            return [self.avg_sgn(s) for s in samples]
-        else:
-            return [self.sgn(s) for s in samples]
+    def predict_one(self, sample, avg=1):
+        return self.avg_sgn(sample) if avg else self.sgn(sample)
 
+    def predict(self, samples, avg=1):
+        return [self.predict_one(s) for s in samples]
 
 class kernel_perceptron(object):
 
