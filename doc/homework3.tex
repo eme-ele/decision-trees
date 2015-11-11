@@ -1,0 +1,157 @@
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[11pt]{article}
+%\input{mydef.tex}
+\usepackage{fancyhdr} % Required for custom headers
+\usepackage{lastpage} % Required to determine the last page for the footer
+\usepackage{extramarks} % Required for headers and footers
+\usepackage[usenames,dvipsnames]{color} % Required for custom colors
+\usepackage{graphicx} % Required to insert images
+\usepackage{listings} % Required for insertion of code
+\usepackage{courier} % Required for the courier font
+\usepackage{amssymb,amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{subfigure}
+\usepackage{enumitem}
+\usepackage{bm}
+\usepackage{url}
+\usepackage[stable]{footmisc}
+\usepackage{booktabs}
+\usepackage[square]{natbib}
+\usepackage{indentfirst}
+%\usepackage[colorlinks, linkcolor=red, anchorcolor=purple, citecolor=blue]{hyperref}
+\usepackage{hyperref}
+
+\usepackage{multicol}
+\setlength{\columnsep}{1cm}
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+\setlength{\headheight}{13.6pt}
+\linespread{1.1} % Line spacing
+
+% Set up the header and footer
+\pagestyle{fancy}
+\lhead{CS 57800} % Top left header
+\chead{}
+\rhead{Howehork 3} % Top right header
+\lfoot{} % Bottom left footer
+\cfoot{} % Bottom center footer
+\rfoot{Page\ \thepage\ of\ \protect\pageref{LastPage}} % Bottom right footer
+\renewcommand\headrulewidth{0.4pt} % Size of the header rule
+\renewcommand\footrulewidth{0.4pt} % Size of the footer rule
+
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+\setlength{\parskip}{.2\baselineskip}
+%\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+\title{
+\textbf{CS57800 Statistical Machine Learning} \\ \textsc{Homework 3} \\
+\normalsize\vspace{0.1in}
+}
+
+\author{
+	\textbf{Maria L. Pacheco} \\
+	Department of Computer Science\\
+	\texttt{pachecog@purdue.edu}
+}
+
+\date{\today}
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle
+%\thispagestyle{empty}
+
+\section{Foundations}
+\subsection{VC dimension of polygons of size n}
+I don't know how to answer this question. 
+
+
+\subsection{Convexity of the logistic loss function}
+To be able to proof that the logistic loss function $\l(y,\hat{y})$ is convex, we need to first check if $\l(y,\hat{y})$ is differentiable with respect to $\hat{y}$, to make sure it lies above all tangent lines and then we need to check if its twice differentiable with respect to $\hat{y}$ and the second derivative is non negative to proove convexity.\\
+$$\l(y,\hat{y}) = \frac{1}{\log2} (1 + \exp(-y\hat{y}))$$
+
+$$\frac{d}{d\hat{y}} (\l(y,\hat{y})) = \frac{1}{\log2} \left ( \frac{-y}{\exp(y\hat{y}) + 1}  \right )$$
+
+$$\frac{d}{d\hat{y}} \left( \frac{d}{d\hat{y}} (\l(y,\hat{y})) \right) = \frac{y^{2} \exp(y\hat{y})}{(\log2) (\exp(\hat{y}y + 1))^{2}}$$
+
+If we evaluate this second derivative for $y = 1$,  for every $\hat{y}$ we have $\l(y,\hat{y}) > 0$. When we evaluate it for $y = -1$, we also have $\l(y,\hat{y}) > 0$ for every $\hat{y}$, since the exponential function approximates 0 as it goes to minus infinity. Therefore, the logistic loss function is convex.
+
+\subsection{Bound on Adaboost training error}
+We know that the expected error on our training set is $\frac{1}{n} \sum_{1}^{n} (y_{i} \neq h(x_{i}))$. If we only have 1 mistake in our training set, our training error would be $\frac{1}{n}$, so we know that for obtaining 0 training error we are looking for an expected training error $< \frac{1}{n}$.\\
+
+We also know that the training error is bounded by $\hat{R}(h) \leq  \exp(-2\gamma^{2}T)$ because the weak hypothesis is always better than random (it has error $0 < \gamma < 0.5$). The training error will decrease exponentialy by the number of iterations $T$. We know formulate this problem as:
+
+$$\exp(-2\gamma^{2}T) < \frac{1}{n}$$
+
+$$ \ln(\exp(-2\gamma^{2}T)) < \ln\left(\frac{1}{n}\right)$$
+
+$$ -2\gamma^{2}T < \ln\left(\frac{1}{n}\right)$$
+
+$$ T > \frac {\ln\left(\frac{1}{n}\right)}{-2\gamma^{2}}$$
+
+$$ T > \frac {ln(n)}{2\gamma^{2}}$$
+
+So we want at least $\frac {ln(n)}{2\gamma^{2}}$ iterations to produce no training error.
+
+
+\subsection{Two rounds of Adaboost}
+
+Adaboost starts with a uniform distribution $D_1$ for iteration 1, therefore in the case of having 10 examples, the probability of each point in this iteration will be equal to $0.1$. When selecting the weak learner that minimizes the error we have a tie between $A = 5$ and $A = 6$ with error 0.2. Ties are broken by choosing the smallest A. In round 2 we have updated the distribution to put weight on the mistakes, since we made 2 mistakes on the previous iteration (the error on the previous was 0.2 on 10 examples) two examples were brought up and 8 examples were pushed down, the mistakes were made on the last two examples. This time the minimizing hypothesis is $A = 3$ with an error of 0.43. Resuming we have:\\ \\
+Round 1:
+\begin{enumerate}
+\item $h_1 = \begin{cases}
+ 1 & \text{ if } (x_{1} > 5) \; \land \; (x_{2}>5)  \\ 
+ -1 & \text{ else} 
+\end{cases}$, the error is 0.2
+\item $D_{1}(i)$ is 0.1 for every $i$
+\end{enumerate}
+Round 2:
+\begin{enumerate}
+\item $h_1 = \begin{cases}
+ 1 & \text{ if } (x_{1} > 3) \; \land \; (x_{2}>3)  \\ 
+ -1 & \text{ else} 
+\end{cases}$, the error is 0.43
+\item $D_{2} = \{0.046, 0.046, 0.046, 0.046, 0.046, 0.046, 0.046, 0.046, 0.34, 0.34\}$ for $i = 0 ... 9$
+\end{enumerate}
+
+The error is calculated by doing $e_t = \sum_{1}^{10} D_{t}(i) (y_{i} \neq h_{t}(x_{1_{i}}, x_{2_{i}}))$
+
+And finally, after having updated $\alpha_t$ during the Adaboost execution, we have $\alpha_1 = 1.0$ and $\alpha_2 = 0.19$ which makes sense, since we are going to put more weight on the first weak classifier that had lesser error. The resulting hypothesis is: $H = sgn(0.1 \; h_{1}(\vec{x}) + 0.19 \; h_{2}(\vec{x}) )$
+
+\subsection{Validity of Kernel functions}
+To show that a kernel is valid we have to show: 1) that is symmetric and 2) that is positive semi-definite. We know that both $K_{1}(x,y)$ and $K_{2}(x,y)$ are valid kernels, and therefore, symmetric and positive semi-definite. \\
+
+We have $K(x,y) = \alpha K_1(x,y) + \beta K_2(x,y)$ since both $K_{1}$ and $K_{2}$ are symetric, we have: $K(x,y) = \alpha K_1(y,x) + \beta K_2(y,x)$ and by definition of $K$ we know: $\alpha K_1(y,x) + \beta K_2(y,x) = K(y,x)$. Therefore  $K(x,y) = K(y,x)$ thus $K$ is symmetric. \\
+
+Now, we have $K_{1}(x,x) \geq 0$ and $K_{2}(x,x) \geq 0$ because both $K_{1}$ and $K_{2}$ are positive semi-definite. Then by definition $K(x,x) = \alpha K_{1}(x,x) + \beta K_{2}(x,x)$ and since $\alpha \geq 0$ and $\beta \geq 0$, then $K(x,x) \geq 0$ thus $K$ is positive semi-definite. \\
+
+\subsection{Upper bound on SVM training error}
+ Given the inequality constraings, we can deduce the following things:
+ \begin{enumerate}
+ \item If no mistake is made on example $i$, meaning $x_{i} * w + b$ produces the correct output, the left side of the inequality constrainst has to be equal to 1 when $y_{i} = 1$ and -1 when $y = -1$. Therefore, when the classification is correct, $\varepsilon = 0$ the slack variable needs to be equal to 0.
+ \item If no mistake is made on example $i$, but the point $i$ is inside the margin then: the left side of the inequality constraints has to be positive when $y_{i} = 1$ and negative when $y = -1$. Therefore, when the classification is correct but the point lies inside the margin,  $0 < \varepsilon \leq 1$.
+ \item If a mistake is made, then the left side of the inequality constraints has to have the opposite sign from the right side. Therefore,  $\varepsilon \geq 1$. 
+ \end{enumerate}
+ 
+ Then we know that the number of mistakes has an upper bound of $\sum_{1}^{M} \varepsilon_{i}$ since for every mistake on $i$, we will add $\varepsilon_{i} \geq 1$. 
+
+\section{Programming Report}
+...
+
+%\nocite{*}
+%\bibliographystyle{plainnat}
+%\bibliography{all}
+
+\end{document}
