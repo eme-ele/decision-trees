@@ -19,6 +19,8 @@ def parse_and_validate():
                       help='(float) lambda argument. must be > 0 and <= 1', default=0.1)
     parser.add_option('-f', dest='feature_set', type='int', default=1,
                       help='(int) 1: unigrams, 2: bigrams, 3: unigrams + bigrams')
+    parser.add_option('-t', dest='tune', type='bool', default=False, action='store_true',
+                      help='tune parameters')
 
     (opts, args) = parser.parse_args()
 
@@ -58,11 +60,83 @@ def preprocess(samples):
     #samples = [s.split() for s in samples]
     return samples
 
+
+def tune_step_size(max_iterations, regularization, lmbd, feature_set):
+    train_samples, train_labels = parse_file("data/hw3/train.csv")
+    val_samples, val_labels = parse_file("data/hw3/test.csv")
+
+    train_samples = preprocess(train_samples)
+    val_samples = preprocess(val_samples)
+
+    if opts.feature_set == 1:
+        fe = ngrams_fe(1)
+    elif opts.feature_set == 2:
+        fe = ngrams_fe(2)
+    elif opts.feature_set == 3:
+        fe = ngrams_fe(1,2)
+
+    fe.train(train_samples, train_labels)
+    train_features = fe.extract(train_samples)
+    val_features = fe.extract(val_samples)
+
+    step_size_arr = [0.001, 0.005, 0.01, 0.05, 0.1]
+
+    max_acc = 0.0
+    max_step = 0
+    for s in step_size_arr:
+        classifier = GD(max_iterations, regularization, s,
+                        lmbd, feature_set, fe.n_feats,
+                        train_features, train_labels)
+        results = classifier.predict(val_features)
+        acc = accuracy_score(test_labels, results)
+        print s, "-", acc
+        if acc > max_acc:
+            max_acc = acc
+            max_step = s
+    print "Choosing", max_step, "Score", max_acc
+    return max_step
+
+
+
+def tune_lmbd(max_iterations, regularization, step_size, feature_set):
+    train_samples, train_labels = parse_file("data/hw3/train.csv")
+    val_samples, val_labels = parse_file("data/hw3/test.csv")
+
+    train_samples = preprocess(train_samples)
+    val_samples = preprocess(val_samples)
+
+    if opts.feature_set == 1:
+        fe = ngrams_fe(1)
+    elif opts.feature_set == 2:
+        fe = ngrams_fe(2)
+    elif opts.feature_set == 3:
+        fe = ngrams_fe(1,2)
+
+    fe.train(train_samples, train_labels)
+    train_features = fe.extract(train_samples)
+    val_features = fe.extract(val_samples)
+
+    lmbd_arr = [0.01, 0.05, 0.1, 0.5]
+
+    max_acc = 0.0
+    max_lmbd = 0
+    for l in lmbd_arr:
+        classifier = GD(max_iterations, regularization, step_size,
+                        l, feature_set, fe.n_feats,
+                        train_features, train_labels)
+        results = classifier.predict(val_features)
+        acc = accuracy_score(test_labels, results)
+        print l, "-", acc
+        if acc > max_acc:
+            max_acc = acc
+            max_lmbd = l
+    print "Choosing", max_lmbd, "Score", max_acc
+    return max_lmbd
+
 # main
 # ----
 # The main program loop
 # You should modify this function to run your experiments
-
 def main():
     opts = parse_and_validate()
     #print opts.max_iterations, opts.regularization, opts.step_size, opts.lmbd, opts.feature_set
@@ -70,6 +144,13 @@ def main():
     # ====================================
     # WRITE CODE FOR YOUR EXPERIMENTS HERE
     # ====================================
+
+    if opts.tune:
+        opts.step_size = tune_step_size(opts.max_iterations, opts.regularization,
+                                        opts.lmbd, opts.feature_set)
+        opts.lmbd = tune_lmbd(opts,max_iterations, opts.regularization,
+                              opts.step_size, opts.feature_set)
+
 
     train_samples, train_labels = parse_file("data/hw3/train.csv")
     test_samples, test_labels = parse_file("data/hw3/test.csv")
