@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 class perceptron(object):
 
@@ -76,7 +77,7 @@ class perceptron(object):
 
 class kernel_perceptron(object):
 
-    def __init__(self, kernel='linear', max_iter=1):
+    def __init__(self, max_iter, kernel='linear'):
         self.max_iter = max_iter
         if kernel == 'poly':
             self.kernel = self.poly_kernel
@@ -94,26 +95,28 @@ class kernel_perceptron(object):
         self.bias = 0
 
     def dot_product(self, x1, x2):
-        dot_product = 0.0
+        dp = 0.0
         for (i, v) in x1:
             for (j, w) in x2:
                 if i == j:
-                    dot_product += v*w
-        return dot_product
+                    dp += v*w
+        return dp
 
     def linear_kernel(self, x1, x2):
-        return self.dot_product
+        return self.dot_product(x1, x2)
 
     def poly_kernel(self, x1, x2, p):
-        return (1 + self.dot_product)**p
+        return (1 + self.dot_product(x1,x2))**p
 
     def blowup_space(self, samples):
-        K = []
-        for x1 in samples:
-            k_row = []
-            for x2 in samples:
-                k_row.append(self.kernel(x1, x2))
-            K.append(k_row)
+        n = len(samples)
+        K = np.zeros([n,n])
+        total = n*n
+        for i in xrange(n):
+            for j in xrange(i, n):
+                p = self.kernel(samples[i],samples[j])
+                K[i,j] = p
+                K[j,i] = p
         return np.array(K)
 
     def filter_samples(self, samples, labels):
@@ -136,7 +139,7 @@ class kernel_perceptron(object):
             num_mistakes = 0
             for j in xrange(num_samples):
                 y = labels[i]
-                y_pred = np.sign(np.sum(K[:,i], self.alpha * y))
+                y_pred = np.sign(np.sum(K[:,i], self.alphas * y))
 
                 if y_pred != y:
                     self.alpha[i] += y
